@@ -23,17 +23,17 @@ The ACC algorithm operates in two core control modes based on target distance me
 ---
 ## Directory Structure
 ```text
-??? models/ # Simulink models (MIL and SIL models)
-??? results/ # SIL simulation scope output plots
-??? scripts/ # Workspace initialization script (setup_ACC_data.m)
-??? src/ # Generated C/C++ source files (ACC_ert_rtw)
-??? README.md
+**models/** # Simulink models (MIL and SIL models)
+**results/** # SIL simulation scope output plots
+**scripts/** # Workspace initialization script (setup_ACC_data.m)
+**src/** # Generated C/C++ source files (ACC_ert_rtw)
+**README.md**: Project documentation
 
 
 How to Run
-1. Run scripts/setup_ACC_data.m in MATLAB to load workspace variables.
+1. Run 'scripts/setup_ACC_data.m' in MATLAB to load workspace variables.
 
-2.Open models/ACC_Controller_SIL.slx.
+2.Open 'models/ACC_Controller_SIL.slx'.
 
 3.Run the simulation to view the SIL scope execution results.
 
