@@ -1,0 +1,58 @@
+# High-Level Software Architecture Specification: Adaptive Cruise Control (ACC)
+
+## 1. System Overview & Hierarchy
+The Adaptive Cruise Control (ACC) system is designed as a Model-Based Development (MBD) architecture consisting of a top-level Model-in-the-Loop (MIL) testbench, a core controller subsystem, and an embedded finite state machine (FSM).
+
+### Structural Breakdown
+* **ACC_Controller_MIL (Top Level Testbench):** Connects the test scenario generation environment (Signal Builder) to the core controller algorithm and visualization scopes.
+* **ACC Algorithm (Subsystem):** Encapsulates the state machine manager, mathematical control modules, and signal routing logic.
+* **ACC_Mode_Manager (Stateflow FSM):** Manages discrete operational mode transitions based on real-time vehicle dynamics and environmental thresholds.
+
+---
+
+## 2. Interface Definitions
+
+### Primary Input Signals
+* **ACC_Enable [boolean]:** User toggle command for system activation.
+* **V_ego [single]:** Current speed of the ego vehicle in meters per second (m/s).
+* **V_set [single]:** Target cruise speed selected by the driver in meters per second (m/s).
+* **D_rel [single]:** Measured relative distance to the lead vehicle in meters (m).
+* **V_rel [single]:** Measured relative speed difference with the lead vehicle in meters per second (m/s).
+
+### Primary Output Signals
+* **Torque_Demand [single]:** Saturated output torque command sent to the powertrain actuator [-150.0 Nm, 150.0 Nm].
+* **ACC_Mode [uint8/single]:** Current state indicator output (0: Off, 1: Standby, 2: Speed Control, 3: Distance Control).
+
+---
+
+## 3. Subsystem Architecture
+
+### 3.1 Stateflow Mode Manager (`ACC_Mode_Manager`)
+The system state machine handles four operational states:
+1. **Off State (`mode = 0`):** Default inactive state. System remains here when `ACC_Enable == 0`.
+2. **Standby State (`mode = 1`):** Transitional state entered upon system activation (`ACC_Enable == 1`).
+3. **Speed Control State (`mode = 2`):** Active cruise control mode executed when `D_rel > D_clear` (50 m).
+4. **Distance Control State (`mode = 3`):** Active vehicle-following mode executed when `D_rel <= D_clear` (50 m).
+
+---
+
+### 3.2 Control Calculation & Logic Modules
+
+#### A. Target Safe Distance Calculation
+Calculates safe headway distance continuously based on ego speed and headway gap:
+$$\text{D\_safe} = \text{D\_min} + (\text{V\_ego} \cdot \text{T\_gap})$$
+
+#### B. Speed Control Computation
+Proportional controller generating torque based on cruise speed error:
+$$\text{Torque\_Speed} = \text{Kp\_spd} \cdot (\text{V\_set} - \text{V\_ego})$$
+
+#### C. Distance Control Computation
+Multi-variable proportional controller tracking distance and relative velocity errors:
+$$\text{Torque\_Dist} = \text{Kp\_dist} \cdot (\text{D\_rel} - \text{D\_safe}) + \text{Kv\_rel} \cdot \text{V\_rel}$$
+
+#### D. Switch Matrix & Actuator Saturation
+* Multi-port switch routes torque commands based on active `ACC_Mode`:
+  * Mode 0 / Mode 1 $\rightarrow$ `0.0 Nm`
+  * Mode 2 $\rightarrow$ `Torque_Speed`
+  * Mode 3 $\rightarrow$ `Torque_Dist`
+* Saturation block enforces physical actuator limitations strictly between `T_min` (-150.0 Nm) and `T_max` (150.0 Nm).
